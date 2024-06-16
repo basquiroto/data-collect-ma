@@ -1,10 +1,12 @@
 # %%
+
+# Parei na segunda aula. https://www.youtube.com/watch?v=JqBLUi9vqgM&list=PLvlkVRRKOYFSrkOL-Bze-42pTdJIAj0_h&index=2
+
 import requests
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 # %%
-url = 'https://www.metal-archives.com/bands/Forest_of_Demons/18054' 
-
 cookies = {
     'masessid': 'WS5TB2745467',
     'PHPSESSID': '8e79d8fa6018c43182ac3bde55e68e70',
@@ -37,13 +39,38 @@ headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
 }
 
-resp = requests.get(url, cookies=cookies, headers=headers)
+def get_content(url):
+    resp = requests.get(url, cookies=cookies, headers=headers)
+    return resp
+
+def get_basic_info(soup):
+    band_info_head = soup.find('div', id = 'band_info')
+
+    bi_title = band_info.find_all('dt')
+    bi_data = band_info.find_all('dd')
+
+    data = {}
+    for i in range(8): # len(bi_title & bi_data)
+        chave, valor = bi_title[i].text, bi_data[i].text
+        data[chave] = valor
+
+    return data
 
 # %%
-print('Status Code: ', resp.status_code)
+url = 'https://www.metal-archives.com/bands/Forest_of_Demons/18054' 
+resp = get_content(url)
+
+if resp.status_code != 200:
+    print("Não foi possível obter os dados")
+else:
+    print('Status Code: ', resp.status_code)
+    
+    soup = BeautifulSoup(resp.text)
+    get_basic_info(soup)
 # %%
-soup = BeautifulSoup(resp.text)
-soup
-# %% Parei aqui: https://youtu.be/K-bIZt_hSBo?feature=shared&t=2627
-soup.find('div', id = 'band_info')
+url2 = 'https://www.metal-archives.com/lists/BR'
+
+resp2 = requests.get(url2, headers=headers)
+
+soup2 = BeautifulSoup(resp2.text) # Lista veio em JavaScript
 # %%
