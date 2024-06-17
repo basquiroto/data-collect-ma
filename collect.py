@@ -1,7 +1,5 @@
 # %%
 
-# Parei na segunda aula. https://www.youtube.com/watch?v=JqBLUi9vqgM&list=PLvlkVRRKOYFSrkOL-Bze-42pTdJIAj0_h&index=2
-
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
