@@ -1,5 +1,7 @@
 # %%
 
+# Parei na segunda aula. https://www.youtube.com/watch?v=JqBLUi9vqgM&list=PLvlkVRRKOYFSrkOL-Bze-42pTdJIAj0_h&index=2
+
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
@@ -66,9 +68,24 @@ else:
     soup = BeautifulSoup(resp.text)
     get_basic_info(soup)
 # %%
+import chromedriver_autoinstaller
+from selenium import webdriver
+
+# https://medium.com/thedevproject/how-to-scrape-javascript-heavy-sites-like-a-pro-with-python-1ecf6f829538
+#chromedriver_autoinstaller.install()
+
+#%%
 url2 = 'https://www.metal-archives.com/lists/BR'
 
 resp2 = requests.get(url2, headers=headers)
 
 soup2 = BeautifulSoup(resp2.text) # Lista veio em JavaScript
+# %%
+driver = webdriver.Chrome()
+driver.get(url2)
+
+# https://selenium-python.readthedocs.io/waits.html
+
+html = driver.page_source
+soup3 = BeautifulSoup(html)
 # %%
