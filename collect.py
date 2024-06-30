@@ -203,8 +203,82 @@ for i in range(1,page_qtd):
 
 # %%
 import pandas as pd
+import geopandas as gpd
+import numpy as np
 # %%
 band_df = pd.DataFrame(band_list).rename(columns={0: 'Name', 1: 'Genre', 2: 'City', 3: 'Status'})
 
 band_df.sample(5)
+band_df = band_df[band_df['Status']=='Active']
+# %%
+band_df.to_csv('D:\\github\\data-collect-ma\\bands_df.csv',
+               sep=';', index=False)
+# %%
+#band_df = pd.read_csv('D:\\github\\data-collect-ma\\bands_df.csv',
+#                     sep=';', header=0)
+#band_df.sample(5)
+#band_df = band_df[band_df['Status']=='Active']
+# %%
+band_df['UF'] = band_df.City.str.split(pat=', ', expand=True)[1]
+# %%
+band_df['UF'].value_counts()[0:26]
+# %%
+sp_correction = ((band_df['UF']=='Sao Paulo') | (band_df['UF']=='Sâo Paulo'))
+rs_correction = ((band_df['UF']=='Rio Grande Do Sul'))
+es_correction = ((band_df['UF']=='Espirito Santo'))
+df_correction = ((band_df['UF']=='Federal District'))
+ba_correction = ((band_df['UF']=='Bahía'))
+go_correction = ((band_df['UF']=='Goias'))
+pi_correction = ((band_df['UF']=='Piaui'))
+
+band_df['UF'] = np.where(sp_correction, 'São Paulo', band_df['UF'])
+band_df['UF'] = np.where(rs_correction, 'Rio Grande do Sul', band_df['UF'])
+band_df['UF'] = np.where(es_correction, 'Espírito Santo', band_df['UF'])
+band_df['UF'] = np.where(df_correction, 'Distrito Federal', band_df['UF'])
+band_df['UF'] = np.where(ba_correction, 'Bahia', band_df['UF'])
+band_df['UF'] = np.where(go_correction, 'Goiás', band_df['UF'])
+band_df['UF'] = np.where(pi_correction, 'Piauí', band_df['UF'])
+# %%
+uf_list = ['São Paulo', 'Minas Gerais','Rio de Janeiro', 'Rio Grande do Sul',
+           'Paraná', 'Bahia', 'Santa Catarina', 'Pernambuco', 'Distrito Federal',
+            'Ceará', 'Paraíba', 'Pará', 'Espírito Santo', 'Piauí', 'Goiás',
+            'Rio Grande do Norte', 'Maranhão', 'Sergipe', 'Amazonas', 
+            'Mato Grosso do Sul', 'Mato Grosso', 'Amapá', 'Alagoas', 'Rondônia',
+            'Acre', 'Tocantins', 'Roraima']
+uf_list_cond = band_df['UF'].isin(uf_list)
+band_df_cln = band_df.loc[uf_list_cond]
+print(band_df_cln['UF'].value_counts())
+
+# %%
+import matplotlib.pyplot as plt
+
+# %%
+plot_data = band_df_cln['UF'].value_counts()
+f_size = 12
+
+fig, ax = plt.subplots(figsize=(7,9))
+ax.barh(plot_data.index, plot_data, 
+        color='black', height=0.777)
+
+for i in range(len(plot_data)):
+    plt.text(plot_data[i]+10, plot_data.index[i], plot_data[i], 
+             ha = 'left', va = 'center', fontsize=f_size)
+
+ax.invert_yaxis()
+ax.set_xlim(left=0, right=1500)
+ax.xaxis.grid(color='gray', linestyle=':', zorder=0, )
+ax.set_axisbelow(True)
+ax.set_xlabel('Número de bandas de metal', fontsize=f_size+2)
+plt.xticks(fontsize=f_size)
+ax.set_ylabel('UF', fontsize=f_size+2)
+plt.yticks(fontsize=f_size)
+ax.margins(y=0.0075)
+ax.set_title('Distribuição das Bandas de Metal no Brasil')
+ax.text(960, 25.4, 'linkedin.com/in/fernandobsouza/', fontsize=f_size-4, color='lightgray')
+ax.text(960, 26, 'Fonte: Metal-Archives.com', fontsize=f_size-3, color='black')
+
+# %%
+blackmetal_condition = band_df['Genre'].str.contains('Black Metal')
+band_df[blackmetal_condition]
+
 # %%
