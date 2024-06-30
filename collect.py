@@ -274,7 +274,7 @@ ax.set_ylabel('UF', fontsize=f_size+2)
 plt.yticks(fontsize=f_size)
 ax.margins(y=0.0075)
 ax.set_title('Distribuição das Bandas de Metal no Brasil')
-ax.text(960, 25.4, 'linkedin.com/in/fernandobsouza/', fontsize=f_size-4, color='lightgray')
+ax.text(960, 25.4, 'linkedin.com/in/fernandobsouza', fontsize=f_size-4, color='lightgray')
 ax.text(960, 26, 'Fonte: Metal-Archives.com', fontsize=f_size-3, color='black')
 
 # %%
