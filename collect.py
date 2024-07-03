@@ -251,6 +251,7 @@ print(band_df_cln['UF'].value_counts())
 
 # %%
 import matplotlib.pyplot as plt
+from shapely import box
 
 # %%
 plot_data = band_df_cln['UF'].value_counts()
@@ -276,6 +277,38 @@ ax.margins(y=0.0075)
 ax.set_title('Distribuição das Bandas de Metal no Brasil')
 ax.text(960, 25.4, 'linkedin.com/in/fernandobsouza', fontsize=f_size-4, color='lightgray')
 ax.text(960, 26, 'Fonte: Metal-Archives.com', fontsize=f_size-3, color='black')
+
+# %%
+uf_geo = gpd.read_file(r'D:\Users\Fernando\Downloads\SC_Municipios_2022')
+print(uf_geo)
+
+# %%
+countries_bnd = gpd.read_file(r'D:\Users\Fernando\Downloads\SC_Municipios_2022\ne_10m_admin_0_countries.shp')
+print(countries_bnd.head())
+
+# %%
+uf_geo_count = uf_geo.join(plot_data, on='NM_UF')
+
+# %%
+fig, ax = plt.subplots()
+
+uf_geo_count.plot(column = 'count', legend=True, ax=ax,
+                  legend_kwds={'label': 'Número de bandas de metal'},
+                  cmap='gist_yarg', zorder=3)
+uf_geo_count.plot(edgecolor='black', ax=ax, zorder=4,
+                  facecolor='None', lw=0.4)
+countries_bnd.plot(edgecolor='lightgray', ax=ax, zorder=2,
+                   facecolor='White', lw=0.4)
+ax.set_title('Distribuição das Bandas de Metal no Brasil')
+
+xMin, yMin, xMax, yMax = uf_geo_count.total_bounds
+ax.set_xlim(xMin*1.05, xMax*1.05)
+ax.set_ylim(yMin*1.05, yMax*1.20)
+background = gpd.GeoDataFrame(geometry=[box(xMin*1.05, yMin*1.05, xMax*1.05, yMax*1.20)], crs=uf_geo_count.crs)
+background.plot(ax=ax, color="#e9f5f9", zorder=0)
+
+ax.text(-49, -32, 'linkedin.com/in/fernandobsouza', fontsize=f_size-5, color='lightgray')
+ax.text(-49, -34, 'Fonte: Metal-Archives.com', fontsize=f_size-4, color='black')
 
 # %%
 blackmetal_condition = band_df['Genre'].str.contains('Black Metal')
