@@ -1,43 +1,138 @@
 # %% 
-# Parei na segunda aula. https://youtu.be/JqBLUi9vqgM?feature=shared&t=2621
-# https://developer.spotify.com/documentation/web-api
+# segunda aula. https://youtu.be/JqBLUi9vqgM?feature=shared&t=2621
+# https://openrouteservice.org/dev/#/api-docs -- Associar ao QGIS + Gerar Isocronicas + Salvar resultado no POstgresql
 
+import os
 import requests
 import json
-import os
 
-# %%
-client_id = os.environ['CLIENT_ID']
-secret_id = os.environ['CLIENT_SECRET_ID']
-# %%
-
-data = {
-    'grant_type': 'client_credentials',
-    'client_id': client_id,
-    'client_secret': secret_id,
+ # %%
+headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+    'Authorization': os.getenv('TOKEN_ORS'),
 }
 
-response = requests.post('https://accounts.spotify.com/api/token', data=data)
-print(response.json())
-# %%
-token = 'Bearer ' + response.json()['access_token']
-header = {
-    'Authorization': token
+nome = 'Rodoviária Florianópolis'
+json_data = {
+    'locations': [
+        [
+            -48.557859,
+            -27.596178
+        ],
+    ],
+    'range': [
+        10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+    ],
 }
-# %%
-def get_artist_id(search_text, query_type, **kwargs):
-    url = 'https://api.spotify.com/v1/search'
-    params = {
-        'q': search_text,
-        'type': query_type,
-        'limit': kwargs.get('limit')
-    }
 
-    response = requests.get(url, params=params, headers=header)
-    return response.json()
+response = requests.post('https://api.openrouteservice.org/v2/isochrones/driving-car', headers=headers, json=json_data)
+print(response.status_code)
+# %%
+json_file = json.loads(response.text)
+print(json_file)
+# %%
+def list_to_wkt(coords, geom_type):
+    # Example of coordinates
+    # [8.663605, 49.402767, 8.702728, 49.435152]
+    
+    n_coords = len(coords)
+    if n_coords % 2 != 0:
+        raise ValueError('Coordinates are not an even number.')
+    
+    if geom_type == 'POLYGON':
+        vertices = [(coords[i], coords[i+1]) for i in range(0, n_coords, 2)]
+        print(vertices)
+
+        wkt = 'POLYGON (('
+        wkt += ', '.join(f'{long} {lat}' for long, lat in vertices)
+        wkt += '))'
+    
+    elif geom_type == 'BBOX':
+        vertices = [(coords[0], coords[1]),
+                    (coords[0], coords[3]),
+                    (coords[2], coords[3]),
+                    (coords[2], coords[1]),
+                    (coords[0], coords[1])]
+        print(vertices)
+        
+        wkt = 'POLYGON (('
+        wkt += ', '.join(f'{long} {lat}' for long, lat in vertices)
+        wkt += '))'
+
+    else:
+        raise ValueError('Geometry convertion not available.')
+
+    return wkt
+# %%
+bbox = list_to_wkt(json_file['bbox'], 'BBOX')
 
 # %%
-response = get_artist_id(search_text='gangrena gasosa', query_type='artist', limit=1)
-artist_id = response['artists']['items'][0]['id']
-print('Artist ID: ', artist_id)
+def pairs_to_wkt(coords):
+    # Coordinates example
+    # [[8.672785, 49.417949], [8.673054, 49.417007]]
+
+    wkt = 'POLYGON (('
+    wkt += ', '.join(f'{long} {lat}' for long, lat in coords)
+    wkt += '))'
+
+    return wkt
+# %%
+lat_origin = json_data['locations'][0][1]
+long_origin = json_data['locations'][0][0]
+
+## only one distance value...
+# distance = json_data['range'][0]
+# coords = json_file['features'][0]['geometry']['coordinates'][0]
+# coordinates = pairs_to_wkt(coords)
+
+## more than one distance value...
+nr_feat = len(json_file['features'])
+
+distance = []
+coordinates = []
+
+for i in range(0, nr_feat):
+    coords = json_file['features'][i]['geometry']['coordinates'][0]
+    wkt = pairs_to_wkt(coords)
+    coordinates.append(wkt)
+
+    dist_value = json_file['features'][i]['properties']['value']
+    distance.append(dist_value)
+    # %%
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+import psycopg2
+
+# %%
+db_url = 'postgresql://postgres:postgres@localhost:5432/postgres'
+engine = create_engine(db_url)
+
+Session = sessionmaker(bind=engine) # Cria classe Sessão.
+s = Session() # Cria uma sessão para conectar no banco.
+
+for i in range(0, nr_feat):
+    insert_query = text('INSERT INTO isochrones (name, lat_origin, long_origin, distance, isochrone) VALUES (:name, :lat_origin, :long_origin, :distance, :isochrone)')
+    s.execute(insert_query, {'name': nome,
+                             'lat_origin': lat_origin, 
+                             'long_origin': long_origin, 
+                             'distance': distance[i], 
+                             'isochrone': coordinates[i]})
+
+s.commit()
+s.close()
+
+"""
+CREATE TABLE IF NOT EXISTS public.isochrones
+(
+    id serial,
+    name varchar,
+    lat_origin varchar,
+    long_origin varchar,
+    distance double precision,
+    isochrone geometry(Polygon,4326),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT isochrones_pkey PRIMARY KEY (id)
+)
+"""
 # %%
