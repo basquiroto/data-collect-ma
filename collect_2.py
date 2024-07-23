@@ -13,17 +13,18 @@ headers = {
     'Authorization': os.getenv('TOKEN_ORS'),
 }
 
-nome = 'Rodoviária Florianópolis'
+nome = 'Mirante Serra Rio Rastro'
 json_data = {
     'locations': [
         [
-            -48.557859,
-            -27.596178
+            -49.549866,
+            -28.393834
         ],
     ],
     'range': [
-        10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+        60, 120, 180, 210, 240, 270, 300
     ],
+    'range_type': 'time' # seconds
 }
 
 response = requests.post('https://api.openrouteservice.org/v2/isochrones/driving-car', headers=headers, json=json_data)
@@ -81,15 +82,15 @@ def pairs_to_wkt(coords):
 lat_origin = json_data['locations'][0][1]
 long_origin = json_data['locations'][0][0]
 
-## only one distance value...
-# distance = json_data['range'][0]
+## only one time value...
+# time = json_data['range'][0]
 # coords = json_file['features'][0]['geometry']['coordinates'][0]
 # coordinates = pairs_to_wkt(coords)
 
-## more than one distance value...
+## more than one time value...
 nr_feat = len(json_file['features'])
 
-distance = []
+time = []
 coordinates = []
 
 for i in range(0, nr_feat):
@@ -97,9 +98,9 @@ for i in range(0, nr_feat):
     wkt = pairs_to_wkt(coords)
     coordinates.append(wkt)
 
-    dist_value = json_file['features'][i]['properties']['value']
-    distance.append(dist_value)
-    # %%
+    time_value = json_file['features'][i]['properties']['value']
+    time.append(time_value)
+# %%
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import psycopg2
@@ -112,11 +113,11 @@ Session = sessionmaker(bind=engine) # Cria classe Sessão.
 s = Session() # Cria uma sessão para conectar no banco.
 
 for i in range(0, nr_feat):
-    insert_query = text('INSERT INTO isochrones (name, lat_origin, long_origin, distance, isochrone) VALUES (:name, :lat_origin, :long_origin, :distance, :isochrone)')
+    insert_query = text('INSERT INTO isochrones (name, lat_origin, long_origin, time_seconds, isochrone) VALUES (:name, :lat_origin, :long_origin, :time_seconds, :isochrone)')
     s.execute(insert_query, {'name': nome,
                              'lat_origin': lat_origin, 
                              'long_origin': long_origin, 
-                             'distance': distance[i], 
+                             'time_seconds': time[i], 
                              'isochrone': coordinates[i]})
 
 s.commit()
@@ -129,7 +130,7 @@ CREATE TABLE IF NOT EXISTS public.isochrones
     name varchar,
     lat_origin varchar,
     long_origin varchar,
-    distance double precision,
+    time_seconds double precision,
     isochrone geometry(Polygon,4326),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT isochrones_pkey PRIMARY KEY (id)
